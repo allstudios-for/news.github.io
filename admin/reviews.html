@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Reviews</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #0D47A1;
+            color: #fff;
+            padding: 20px;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        header img {
+            width: 40px;
+            height: 40px;
+        }
+        header h1 {
+            margin: 0;
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #ccc;
+        }
+        footer small {
+            display: block;
+        }
+        .review-table {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background: #fff;
+            color: #000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .review-table th, .review-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ccc;
+        }
+        .review-table th {
+            background-color: #1565C0;
+            color: #fff;
+        }
+        .review-table tr:last-child td {
+            border-bottom: none;
+        }
+        #review-chart, #status-chart {
+            max-width: 800px;
+            margin: 40px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        #show-charts-btn, #show-all-stats-btn {
+            display: block;
+            margin: 20px auto;
+            background-color: #1565C0;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #show-charts-btn:hover, #show-all-stats-btn:hover {
+            background-color: #0D47A1;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="https://swearss.eu/favicon.ico" alt="Swearss Logo">
+        <h1>Customer Reviews</h1>
+    </header>
+
+    <!-- Rating Chart Section -->
+    <div id="review-chart">
+        <canvas id="rating-chart"></canvas>
+    </div>
+
+    <!-- Success/Failure Status Chart Section -->
+    <div id="status-chart">
+        <canvas id="status-success-chart"></canvas>
+    </div>
+
+    <table class="review-table">
+        <thead>
+            <tr>
+                <th>Request ID</th>
+                <th>Status</th>
+                <th>Email</th>
+                <th>Rating</th>
+                <th>Comment</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody id="review-list">
+        </tbody>
+    </table>
+
+    <footer>
+        <small>&copy; Swearss, 2025</small>
+        <small>Operator and provider of this form: Swearss</small>
+    </footer>
+
+    <button id="show-charts-btn">Show Pie Charts</button>
+    <button id="show-all-stats-btn">Show All Statistics</button>
+
+    <script>
+        // Load reviews from localStorage
+        const reviews = JSON.parse(localStorage.getItem('reviews')) || [];
+        const reviewList = document.getElementById('review-list');
+
+        // Create table rows for reviews
+        reviews.forEach(review => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${review.request_number}</td>
+                <td>${review.status}</td>
+                <td>${review.email}</td>
+                <td>${review.rating}</td>
+                <td>${review.comments}</td>
+                <td>${new Date(review.timestamp).toLocaleDateString()}</td>
+            `;
+            reviewList.appendChild(row);
+        });
+
+        // Generate rating statistics
+        const ratingCounts = [0, 0, 0, 0, 0]; // counts for ratings 1 to 5
+        const statusCounts = { successful: 0, unsuccessful: 0 }; // counts for "Successful" vs "Unsuccessful"
+        const yearStats = {}; // To store stats for each year
+
+        reviews.forEach(review => {
+            // Count ratings
+            const rating = parseInt(review.rating, 10);
+            if (rating >= 1 && rating <= 5) {
+                ratingCounts[rating - 1]++;
+            }
+
+            // Count success/failure status
+            const status = review.status.toLowerCase();
+            if (status.includes('successful')) {
+                statusCounts.successful++;
+            } else if (status.includes('unsuccessful')) {
+                statusCounts.unsuccessful++;
+            }
+
+            // Count statistics for each year
+            const reviewYear = new Date(review.timestamp).getFullYear();
+            if (!yearStats[reviewYear]) {
+                yearStats[reviewYear] = { successful: 0, unsuccessful: 0, ratings: [0, 0, 0, 0, 0] };
+            }
+            if (status.includes('successful')) {
+                yearStats[reviewYear].successful++;
+            } else if (status.includes('unsuccessful')) {
+                yearStats[reviewYear].unsuccessful++;
+            }
+            // Increment the rating count for the specific year
+            if (rating >= 1 && rating <= 5) {
+                yearStats[reviewYear].ratings[rating - 1]++;
+            }
+        });
+
+        // Create the rating chart
+        const ctxRating = document.getElementById('rating-chart').getContext('2d');
+        const ratingChart = new Chart(ctxRating, {
+            type: 'bar', // Bar chart
+            data: {
+                labels: ['1', '2', '3', '4', '5'],
+                datasets: [{
+                    label: 'Number of Reviews by Rating',
+                    data: ratingCounts,
+                    backgroundColor: ['#FF6B6B', '#FFD93D', '#FFEA2D', '#4CAF50', '#0D47A1'],
+                    borderColor: ['#FF4D4D', '#FFCC00', '#FFDF00', '#388E3C', '#0D47A1'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Create the success/failure status chart (initially hidden)
+        const ctxStatus = document.getElementById('status-success-chart').getContext('2d');
+        const statusChart = new Chart(ctxStatus, {
+            type: 'pie', // Pie chart
+            data: {
+                labels: ['Successful', 'Unsuccessful'],
+                datasets: [{
+                    label: 'Review Status',
+                    data: [statusCounts.successful, statusCounts.unsuccessful],
+                    backgroundColor: ['#4CAF50', '#FF6B6B'],
+                    borderColor: ['#388E3C', '#FF4D4D'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        });
+
+        // Hide the success/failure chart initially
+        document.getElementById('status-chart').style.display = 'none';
+
+        // Show the success/failure pie chart on button click
+        document.getElementById('show-charts-btn').addEventListener('click', function() {
+            const statusChartContainer = document.getElementById('status-chart');
+            if (statusChartContainer.style.display === 'none') {
+                statusChartContainer.style.display = 'block';
+                this.textContent = 'Hide Pie Charts'; // Change button text to "Hide Pie Charts"
+            } else {
+                statusChartContainer.style.display = 'none';
+                this.textContent = 'Show Pie Charts'; // Change button text back
+            }
+        });
+
+        // Show all statistics for each year, including ratings from 1 to 5
+        document.getElementById('show-all-stats-btn').addEventListener('click', function() {
+            let statsMessage = '';
+            for (const year in yearStats) {
+                const yearData = yearStats[year];
+                statsMessage += `Year: ${year} - Successful: ${yearData.successful}, Unsuccessful: ${yearData.unsuccessful}\n`;
+                statsMessage += `Ratings: 1: ${yearData.ratings[0]}, 2: ${yearData.ratings[1]}, 3: ${yearData.ratings[2]}, 4: ${yearData.ratings[3]}, 5: ${yearData.ratings[4]}\n`;
+            }
+            alert(statsMessage); // Display the statistics in an alert box
+        });
+
+        // Cleanup old reviews and store them in a historical record after 15 days
+        const validReviews = reviews.filter(review => {
+            const reviewDate = new Date(review.timestamp);
+            return (new Date() - reviewDate) / (1000 * 60 * 60 * 24) <= 15;
+        });
+
+        if (validReviews.length !== reviews.length) {
+            localStorage.setItem('reviews', JSON.stringify(validReviews));
+
+            // Store the historical data (if it's been more than 15 days)
+            const historicalReviews = JSON.parse(localStorage.getItem('historical-reviews')) || [];
+            historicalReviews.push({ 
+                reviews: reviews, 
+                timestamp: new Date().toISOString() 
+            });
+            localStorage.setItem('historical-reviews', JSON.stringify(historicalReviews));
+        }
+    </script>
+</body>
+</html>
