@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Review Form</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #0D47A1;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        header img {
+            width: 40px;
+            height: 40px;
+        }
+        header h1 {
+            margin: 0;
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #ccc;
+        }
+        footer small {
+            display: block;
+        }
+        .form-container {
+            background: #fff;
+            color: #000;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 400px;
+            animation: slide-in 0.5s ease;
+        }
+        .form-container h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="email"], select, textarea {
+            width: 100%;
+            padding: 12px; /* Väčší padding pre lepší vzhľad */
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box; /* Aby padding nepresahoval šírku */
+        }
+        textarea {
+            resize: vertical; /* Povolenie vertikálneho resize */
+            min-height: 100px; /* Prednastavená výška pre textarea */
+        }
+        button {
+            width: 100%;
+            background: #0D47A1;
+            color: #fff;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #1565C0;
+        }
+        .thank-you {
+            text-align: center;
+            display: none;
+        }
+        @keyframes slide-in {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+        <img src="https://swearss.eu/favicon.ico" alt="Swearss Logo">
+        <h1>Customer Review</h1>
+    </header>
+    <div class="form-container">
+        <h2>Rate Our Response</h2>
+        <form id="review-form">
+            <div class="form-group">
+                <label for="request-number">Request ID</label>
+                <input type="text" id="request-number" name="request_number" readonly>
+            </div>
+            <div class="form-group">
+                <label for="status">Response Status</label>
+                <input type="text" id="status" name="status" readonly>
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" readonly>
+            </div>
+            <div class="form-group">
+                <label for="rating">Rating (1-5)</label>
+                <select id="rating" name="rating" required>
+                    <option value="">Choose...</option>
+                    <option value="1">1 - Very Dissatisfied</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5 - Very Satisfied</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="comments">Comments</label>
+                <textarea id="comments" name="comments" rows="4" placeholder="Write your comments..."></textarea>
+            </div>
+            <button type="submit">Submit</button>
+        </form>
+        <div class="thank-you">
+            <h2>Thank you for your feedback!</h2>
+        </div>
+    </div>
+    <footer>
+        <small>&copy; Swearss, 2025</small>
+        <small>Operator and provider of this form: Swearss</small>
+    </footer>
+    <script>
+        // Fill the form with URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        document.getElementById('request-number').value = urlParams.get('request_number') || '';
+        document.getElementById('status').value = urlParams.get('status') || '';
+        document.getElementById('email').value = urlParams.get('email') || '';
+
+        // Handle form submission
+        document.getElementById('review-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const review = {
+                request_number: document.getElementById('request-number').value,
+                status: document.getElementById('status').value,
+                email: document.getElementById('email').value,
+                rating: document.getElementById('rating').value,
+                comments: document.getElementById('comments').value,
+                timestamp: new Date().toISOString()
+            };
+
+            // Save review to localStorage
+            const reviews = JSON.parse(localStorage.getItem('reviews')) || [];
+            reviews.push(review);
+            localStorage.setItem('reviews', JSON.stringify(reviews));
+
+            // Show thank-you message
+            document.querySelector('.form-container form').style.display = 'none';
+            document.querySelector('.form-container .thank-you').style.display = 'block';
+        });
+
+        // Cleanup old reviews
+        const reviews = JSON.parse(localStorage.getItem('reviews')) || [];
+        const validReviews = reviews.filter(review => {
+            const reviewDate = new Date(review.timestamp);
+            return (new Date() - reviewDate) / (1000 * 60 * 60 * 24) <= 15;
+        });
+        localStorage.setItem('reviews', JSON.stringify(validReviews));
+    </script>
+</body>
+</html>
